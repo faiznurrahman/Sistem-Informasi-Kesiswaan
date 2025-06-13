@@ -1,8 +1,21 @@
 // Begin: Dark Mode
 const toggleDarkMode = document.getElementById("toggleDarkMode");
-toggleDarkMode.addEventListener("click", function (e) {
+const themeIcon = document.getElementById("themeIcon");
+
+// Fungsi untuk update ikon sesuai mode saat ini
+function updateIcon() {
+  const isDark = document.documentElement.classList.contains("dark");
+  themeIcon.className = isDark ? "ri-sun-line text-lg" : "ri-moon-line text-lg";
+}
+
+toggleDarkMode.addEventListener("click", () => {
   document.documentElement.classList.toggle("dark");
+  updateIcon();
 });
+
+// Jalankan sekali saat awal untuk set ikon sesuai mode awal
+updateIcon();
+
 // End: Dark Mode
 
 // start: Sidebar
