@@ -1,6 +1,6 @@
 <?php
 global $conn;
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 $message = '';
 
@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if (in_array($foto_ext, $allowed_ext)) {
             $foto = uniqid() . '.' . $foto_ext;
-            $foto_path = __DIR__ . '/../../Uploads/' . $foto;
+            $foto_path = dirname(__DIR__, 3) . '/uploads/' . $foto;
             if (!move_uploaded_file($foto_tmp, $foto_path)) {
                 $message = '<p class="text-red-600 dark:text-red-400 font-bold">Gagal mengunggah foto!</p>';
             }

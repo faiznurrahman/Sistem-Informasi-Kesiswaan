@@ -1,6 +1,6 @@
 <?php
 global $conn;
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 $action = $_GET['action'] ?? '';
 $id = $_GET['id'] ?? null;
@@ -31,7 +31,7 @@ if ($action === 'delete' && $id) {
         $get_foto = mysqli_query($conn, "SELECT foto FROM siswa WHERE id_siswa = '$id'");
         $foto_data = mysqli_fetch_assoc($get_foto);
         if (!empty($foto_data['foto'])) {
-            $foto_path = __DIR__ . '/../../Uploads/' . $foto_data['foto'];
+            $foto_path = dirname(__DIR__, 3) . '/uploads/' . $foto_data['foto'];
             if (file_exists($foto_path)) {
                 unlink($foto_path); // hapus file foto
             }
@@ -86,7 +86,7 @@ if ($action === 'tambah') {
     while ($row = mysqli_fetch_assoc($query)) {
         $foto_nama_file = $row['foto'];
         $foto_url = 'http://kesiswaan.test/uploads/' . $foto_nama_file;
-        $foto_path = __DIR__ . '/../../Uploads/' . $foto_nama_file;
+        $foto_path = dirname(__DIR__, 3) . '/uploads/' . $foto_nama_file;
 
         if (is_file($foto_path)) {
             $row['foto'] = '<img src="' . $foto_url . '" alt="Foto" class="w-16 h-16 object-cover rounded-lg">';
@@ -112,7 +112,7 @@ if ($action === 'tambah') {
         'delete' => true,
     ];
 
-    include __DIR__ . '/../../templates/alert.php';
-    include __DIR__ . '/../../templates/table-template.php';
+    require_once dirname(__DIR__, 3) . '/templates/alert.php';
+    require_once dirname(__DIR__, 3) . '/templates/table-template.php';
 }
 ?>

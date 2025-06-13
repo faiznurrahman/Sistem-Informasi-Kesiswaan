@@ -1,6 +1,6 @@
 <?php
 global $conn;
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 $action = $_GET['action'] ?? '';
 $id = $_GET['id'] ?? null;
@@ -80,7 +80,7 @@ if ($action === 'tambah') {
         'delete' => false,
     ];
 
-    include __DIR__ . '/../../templates/alert.php';
-    include __DIR__ . '/../../templates/table-template.php';
+    require_once dirname(__DIR__, 3) . '/templates/alert.php';
+    require_once dirname(__DIR__, 3) . '/templates/table-template.php';
 }
 ?>

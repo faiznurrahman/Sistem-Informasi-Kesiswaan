@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 // Periksa koneksi database
 if ($conn->connect_error) {
@@ -17,8 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Ambil dan sanitasi data dari form
+$id_guru = filter_input(INPUT_POST, 'id_guru', FILTER_SANITIZE_NUMBER_INT) ?? 0;
 $nip = filter_input(INPUT_POST, 'nip', FILTER_SANITIZE_STRING) ?? '';
-$nama = filter_input(INPUT_POST, 'namaLengkap', FILTER_SANITIZE_STRING) ?? '';
+$nama = filter_input(INPUT_POST, 'nama', FILTER_SANITIZE_STRING) ?? '';
 $jenis_kelamin = filter_input(INPUT_POST, 'jenis_kelamin', FILTER_SANITIZE_STRING) ?? '';
 $ttl = filter_input(INPUT_POST, 'tempat_tanggal_lahir', FILTER_SANITIZE_STRING) ?? '';
 $alamat = filter_input(INPUT_POST, 'alamat', FILTER_SANITIZE_STRING) ?? '';
@@ -29,6 +30,9 @@ $prodi = filter_input(INPUT_POST, 'program_studi', FILTER_SANITIZE_STRING) ?? ''
 
 // Validasi input
 $errors = [];
+if ($id_guru <= 0) {
+    $errors[] = 'ID guru tidak valid!';
+}
 if (empty($nip) || !preg_match('/^[0-9]{10,18}$/', $nip)) {
     $errors[] = 'NIP tidak valid!';
 }
@@ -46,8 +50,19 @@ if (empty($no_hp) || !preg_match('/^08[0-9]{8,12}$/', $no_hp)) {
 }
 
 // Proses upload foto
-$upload_dir = dirname(__DIR__, 2) . '/uploads/';
+$upload_dir = dirname(__DIR__, 2) . '/Uploads/';
 $foto = '';
+$existing_foto = '';
+// Ambil foto yang sudah ada
+$cek_foto = $conn->prepare("SELECT foto FROM guru WHERE id_guru = ?");
+$cek_foto->bind_param("i", $id_guru);
+$cek_foto->execute();
+$hasil_cek_foto = $cek_foto->get_result();
+if ($row = $hasil_cek_foto->fetch_assoc()) {
+    $existing_foto = $row['foto'];
+}
+$cek_foto->close();
+
 if (isset($_FILES['file-upload']) && $_FILES['file-upload']['error'] === UPLOAD_ERR_OK) {
     $allowed_types = ['image/jpeg', 'image/png'];
     $max_size = 10 * 1024 * 1024; // 10MB
@@ -63,10 +78,16 @@ if (isset($_FILES['file-upload']) && $_FILES['file-upload']['error'] === UPLOAD_
         $target = $upload_dir . $namaFile;
         if (move_uploaded_file($_FILES['file-upload']['tmp_name'], $target)) {
             $foto = $namaFile;
+            // Hapus foto lama jika ada
+            if ($existing_foto && file_exists($upload_dir . $existing_foto)) {
+                unlink($upload_dir . $existing_foto);
+            }
         } else {
             $errors[] = 'Gagal mengunggah foto!';
         }
     }
+} else {
+    $foto = $existing_foto; // Gunakan foto yang sudah ada
 }
 
 // Jika ada error, simpan pesan dan redirect
@@ -76,42 +97,56 @@ if (!empty($errors)) {
     exit;
 }
 
-// Cari id_pengguna
-$query = "SELECT id_pengguna FROM pengguna WHERE nip = ? AND nama = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("ss", $nip, $nama);
-$stmt->execute();
-$result = $stmt->get_result();
+// Cek apakah data guru ada
+$cek = $conn->prepare("SELECT id_guru FROM guru WHERE id_guru = ?");
+$cek->bind_param("i", $id_guru);
+$cek->execute();
+$hasil_cek = $cek->get_result();
 
-if ($row = $result->fetch_assoc()) {
-    $id_pengguna = $row['id_pengguna'];
+if ($hasil_cek->num_rows === 0) {
+    $_SESSION['error'] = 'Data guru tidak ditemukan!';
+    echo "<script>window.location.href = '/index.php?page=guru';</script>";
+    exit;
+}
+$cek->close();
 
-    // Cek apakah data guru sudah ada
-    $cek = $conn->prepare("SELECT * FROM guru WHERE id_guru = ?");
-    $cek->bind_param("i", $id_pengguna);
-    $cek->execute();
-    $hasil_cek = $cek->get_result();
+// Cek apakah NIP sudah digunakan oleh pengguna lain
+$cek_nip = $conn->prepare("SELECT id_pengguna FROM pengguna WHERE nip = ? AND id_pengguna != ?");
+$cek_nip->bind_param("si", $nip, $id_guru);
+$cek_nip->execute();
+$hasil_cek_nip = $cek_nip->get_result();
+if ($hasil_cek_nip->num_rows > 0) {
+    $_SESSION['error'] = 'NIP sudah digunakan oleh pengguna lain!';
+    echo "<script>window.location.href = '/index.php?page=guru';</script>";
+    exit;
+}
+$cek_nip->close();
 
-    if ($hasil_cek->num_rows === 0) {
-        // Insert data ke tabel guru
-        $sql = "INSERT INTO guru (
-            id_guru, jenis_kelamin, tempat_tanggal_lahir, alamat, no_hp, email, pendidikan_terakhir, program_studi, foto
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("issssssss", $id_pengguna, $jenis_kelamin, $ttl, $alamat, $no_hp, $email, $pendidikan, $prodi, $foto);
+// Mulai transaksi
+$conn->begin_transaction();
+try {
+    // Update pengguna table
+    $sql_pengguna = "UPDATE pengguna SET nama = ?, nip = ? WHERE id_pengguna = ?";
+    $stmt_pengguna = $conn->prepare($sql_pengguna);
+    $stmt_pengguna->bind_param("ssi", $nama, $nip, $id_guru);
+    $stmt_pengguna->execute();
+    $stmt_pengguna->close();
 
-        if ($stmt->execute()) {
-            $_SESSION['success'] = 'User berhasil ditambahkan!';
-        } else {
-            $_SESSION['error'] = 'Gagal menyimpan data guru!';
-        }
-    } else {
-        $_SESSION['error'] = 'Data guru sudah terdaftar!';
-    }
-} else {
-    $_SESSION['error'] = 'Pengguna tidak ditemukan!';
+    // Update guru table
+    $sql_guru = "UPDATE guru SET jenis_kelamin = ?, tempat_tanggal_lahir = ?, alamat = ?, no_hp = ?, email = ?, pendidikan_terakhir = ?, program_studi = ?, foto = ? WHERE id_guru = ?";
+    $stmt_guru = $conn->prepare($sql_guru);
+    $stmt_guru->bind_param("ssssssssi", $jenis_kelamin, $ttl, $alamat, $no_hp, $email, $pendidikan, $prodi, $foto, $id_guru);
+    $stmt_guru->execute();
+    $stmt_guru->close();
+
+    $conn->commit();
+    $_SESSION['success'] = 'Data guru berhasil diperbarui!';
+} catch (Exception $e) {
+    $conn->rollback();
+    $_SESSION['error'] = 'Gagal memperbarui data guru!';
 }
 
 // Redirect ke halaman guru
 echo "<script>window.location.href = '/index.php?page=guru';</script>";
 exit;
+?>

@@ -86,7 +86,7 @@ if ($action === 'tambah') {
         'edit' => true,
         'delete' => true,
     ];
-    include __DIR__ . '/../../templates/alert.php';
-    include __DIR__ . '/../../templates/table-template.php';
+    require_once dirname(__DIR__, 3) . '/templates/alert.php';
+    require_once dirname(__DIR__, 3) . '/templates/table-template.php';
 }
 ?>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Form Edit Data Guru</title>
+    <title>Form Registrasi Guru</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -36,62 +36,22 @@
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 transition-all duration-500">
 
-    <?php
-    // Database connection (adjust as per your setup)
-    $servername = "localhost";
-    $username = "root";
-    $password = "root";
-    $dbname = "kesiswaan";
-
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Get the teacher ID from the URL
-    $id_guru = isset($_GET['id']) ? intval($_GET['id']) : 0;
-    $teacher = null;
-
-    if ($id_guru > 0) {
-        // Join with pengguna table to get nama and nip
-        $sql = "SELECT g.*, p.nama, p.nip 
-                FROM guru g 
-                JOIN pengguna p ON g.id_guru = p.id_pengguna 
-                WHERE g.id_guru = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $id_guru);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $teacher = $result->fetch_assoc();
-        $stmt->close();
-    }
-
-    $conn->close();
-
-    if (!$teacher) {
-        echo "<div class='container mx-auto px-4 py-8 text-center text-red-600'>Data guru tidak ditemukan.</div>";
-        exit;
-    }
-    ?>
-
     <div class="container mx-auto px-4 py-8 animate-fade-in">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-8 animate-slide-up">
                 <h1 class="text-4xl font-bold text-black dark:text-white mb-2">
-                    Form Edit Data Guru
+                    Form Registrasi Guru
                 </h1>
                 <p class="text-gray-600 dark:text-gray-300 text-lg">
-                    Perbarui data diri dengan teliti
+                    Lengkapi data diri Anda dengan teliti
                 </p>
                 <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-4 rounded-full"></div>
             </div>
 
             <!-- Form Container -->
             <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-3xl shadow-2xl p-8 animate-slide-up border border-white/20">
-                <form id="teacherForm" class="space-y-8" action="pages/guru/update_guru.php" method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="id_guru" value="<?php echo htmlspecialchars($teacher['id_guru']); ?>">
-                    
+                <form id="teacherForm" class="space-y-8" action="pages/admin/guru/simpan_guru.php" method="POST" enctype="multipart/form-data">
                     <!-- Personal Info Section -->
                     <div class="space-y-6">
                         <h2 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center">
@@ -110,11 +70,11 @@
                                 <input 
                                     type="text" 
                                     id="namaLengkap"
-                                    name="nama"
+                                    name="namaLengkap"
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['nama']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="Masukkan nama lengkap"
+                                    readonly
                                 >
                             </div>
                             
@@ -128,7 +88,6 @@
                                     id="nip"
                                     name="nip"
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['nip']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="Masukkan NIP/NIK"
                                 >
@@ -146,8 +105,8 @@
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500 cursor-pointer"
                                 >
                                     <option value="">Pilih jenis kelamin</option>
-                                    <option value="L" <?php echo $teacher['jenis_kelamin'] == 'L' ? 'selected' : ''; ?>>Laki-laki</option>
-                                    <option value="P" <?php echo $teacher['jenis_kelamin'] == 'P' ? 'selected' : ''; ?>>Perempuan</option>
+                                    <option value="L">Laki-laki</option>
+                                    <option value="P">Perempuan</option>
                                 </select>
                             </div>
                             
@@ -160,7 +119,6 @@
                                     name="tempat_tanggal_lahir"
                                     type="text" 
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['tempat_tanggal_lahir']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="Jakarta, 01 Januari 1990"
                                 >
@@ -178,7 +136,7 @@
                                 rows="3"
                                 class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500 resize-none" 
                                 placeholder="Masukkan alamat lengkap Anda"
-                            ><?php echo htmlspecialchars($teacher['alamat']); ?></textarea>
+                            ></textarea>
                         </div>
                     </div>
 
@@ -201,7 +159,6 @@
                                     type="tel" 
                                     name="no_hp"
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['no_hp']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="08xxxxxxxxxx"
                                 >
@@ -216,7 +173,6 @@
                                     type="email" 
                                     name="email"
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['email']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="nama@email.com"
                                 >
@@ -233,10 +189,10 @@
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500 cursor-pointer"
                                 >
                                     <option value="">Pilih pendidikan terakhir</option>
-                                    <option value="Diploma 3" <?php echo $teacher['pendidikan_terakhir'] == 'Diploma 3' ? 'selected' : ''; ?>>Diploma 3</option>
-                                    <option value="S1" <?php echo $teacher['pendidikan_terakhir'] == 'S1' ? 'selected' : ''; ?>>Sarjana (S1)</option>
-                                    <option value="S2" <?php echo $teacher['pendidikan_terakhir'] == 'S2' ? 'selected' : ''; ?>>Magister (S2)</option>
-                                    <option value="S3" <?php echo $teacher['pendidikan_terakhir'] == 'S3' ? 'selected' : ''; ?>>Doktor (S3)</option>
+                                    <option value="Diploma 3">Diploma 3</option>
+                                    <option value="S1">Sarjana (S1)</option>
+                                    <option value="S2">Magister (S2)</option>
+                                    <option value="S3">Doktor (S3)</option>
                                 </select>
                             </div>
 
@@ -249,7 +205,6 @@
                                     type="text" 
                                     name="program_studi"
                                     required
-                                    value="<?php echo htmlspecialchars($teacher['program_studi']); ?>"
                                     class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-500" 
                                     placeholder="Pendidikan Matematika, Bahasa Indonesia, dll."
                                 >
@@ -274,7 +229,7 @@
                                 >
                                 <input id="file-upload" name="file-upload" type="file" accept="image/*" class="sr-only" />
 
-                                <div id="upload-content" class="space-y-4 <?php echo $teacher['foto'] ? 'hidden' : ''; ?>">
+                                <div id="upload-content" class="space-y-4">
                                     <div
                                     class="mx-auto w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                                     >
@@ -301,14 +256,13 @@
                                     </div>
                                 </div>
 
-                                <div id="preview-content" class="space-y-4 <?php echo $teacher['foto'] ? '' : 'hidden'; ?>">
+                                <div id="preview-content" class="hidden">
                                     <img
                                     id="preview-image"
                                     class="mx-auto w-32 h-32 rounded-xl object-cover shadow-lg"
-                                    src="<?php echo $teacher['foto'] ? 'uploads/' . htmlspecialchars($teacher['foto']) : ''; ?>"
                                     alt="Preview"
                                     />
-                                    <p class="mt-4 text-sm text-green-600 dark:text-green-400 font-medium">✓ Foto saat ini</p>
+                                    <p class="mt-4 text-sm text-green-600 dark:text-green-400 font-medium">✓ Foto berhasil diupload</p>
                                     <button
                                     type="button"
                                     id="change-photo"
@@ -339,7 +293,7 @@
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                Simpan Perubahan
+                                Simpan Data
                                 </span>
                             </button>
                         </div>
@@ -415,6 +369,7 @@
             const nip = nipInput.value.trim();
             nipError.classList.add('hidden'); // Reset error message
             nipError.textContent = '';
+            namaInput.value = '';
             namaInput.classList.remove('border-green-500', 'border-red-500');
 
             if (nip === '') {
@@ -422,7 +377,7 @@
             }
 
             try {
-                const response = await fetch('pages/guru/get_nama.php', {
+                const response = await fetch('pages/admin/guru/get_nama.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -447,6 +402,8 @@
                 nipError.classList.remove('hidden');
             }
         });
+
+        
     </script>
 </body>
 </html>

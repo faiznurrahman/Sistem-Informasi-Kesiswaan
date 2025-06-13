@@ -1,59 +1,67 @@
 <?php
 global $conn;
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 $action = $_GET['action'] ?? '';
 $id = $_GET['id'] ?? null;
 
-// Hapus data guru
 if ($action === 'delete' && $id) {
-    // Validasi relasi: cek apakah data guru dipakai di tabel lain
-    $relasi_cek = [
-        'kelas' => mysqli_query($conn, "SELECT COUNT(*) AS total FROM kelas WHERE id_walikelas = '$id'"),
-        'mapel_guru' => mysqli_query($conn, "SELECT COUNT(*) AS total FROM mapel_guru WHERE id_guru = '$id'"),
-        'nilai_siswa' => mysqli_query($conn, "SELECT COUNT(*) AS total FROM nilai_siswa WHERE id_guru = '$id'")
-    ];
-
-    $terhubung = false;
-    foreach ($relasi_cek as $tabel => $query_result) {
-        $jumlah = mysqli_fetch_assoc($query_result)['total'] ?? 0;
-        if ($jumlah > 0) {
-            $terhubung = true;
-            break;
-        }
-    }
-
-    if ($terhubung) {
-        $_SESSION['alert'] = [
-            'type' => 'error',
-            'message' => 'Gagal menghapus data. Guru masih terhubung dengan data lain seperti wali kelas, mapel, atau nilai.'
-        ];
-    } else {
+    // Mulai transaksi untuk memastikan integritas data
+    $conn->begin_transaction();
+    try {
         // Hapus foto jika ada
         $get_foto = mysqli_query($conn, "SELECT foto FROM guru WHERE id_guru = '$id'");
         $foto_data = mysqli_fetch_assoc($get_foto);
         if (!empty($foto_data['foto'])) {
-            $foto_path = __DIR__ . '/../../Uploads/' . $foto_data['foto'];
+            $foto_path = dirname(__DIR__, 3) . '/uploads/' . $foto_data['foto'];
             if (file_exists($foto_path)) {
-                unlink($foto_path); // hapus file foto
+                unlink($foto_path); // Hapus file foto
             }
         }
 
-        // Hapus hanya dari tabel guru
+        // Hapus data terkait dari tabel-tabel yang berelasi
+        $stmt = $conn->prepare("DELETE FROM kelas WHERE id_walikelas = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM mapel_guru WHERE id_guru = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM nilai_siswa WHERE id_guru = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM jadwal WHERE id_guru = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        // Hapus data dari tabel guru
         $stmt = $conn->prepare("DELETE FROM guru WHERE id_guru = ?");
         $stmt->bind_param("i", $id);
         if ($stmt->execute()) {
             $_SESSION['alert'] = [
                 'type' => 'success',
-                'message' => 'Data guru berhasil dihapus.'
+                'message' => 'Data guru dan data terkait berhasil dihapus.'
             ];
         } else {
-            $_SESSION['alert'] = [
-                'type' => 'error',
-                'message' => 'Gagal menghapus data guru. Silakan coba lagi.'
-            ];
+            throw new Exception('Gagal menghapus data guru.');
         }
         $stmt->close();
+
+        // Commit transaksi jika semua berhasil
+        $conn->commit();
+    } catch (Exception $e) {
+        // Rollback transaksi jika ada error
+        $conn->rollback();
+        $_SESSION['alert'] = [
+            'type' => 'error',
+            'message' => 'Gagal menghapus data: ' . $e->getMessage()
+        ];
     }
 
     echo "<script>window.location.href = '/index.php?page=guru';</script>";
@@ -89,7 +97,7 @@ if ($action === 'tambah') {
     while ($row = mysqli_fetch_assoc($query)) {
         $foto_nama_file = $row['foto'];
         $foto_url = 'http://kesiswaan.test/uploads/' . $foto_nama_file;
-        $foto_path = __DIR__ . '/../../Uploads/' . $foto_nama_file;
+        $foto_path =  dirname(__DIR__, 3) . '/uploads/' . $foto_nama_file;
 
         if (is_file($foto_path)) {
             $row['foto'] = '<img src="' . $foto_url . '" alt="Foto" class="w-16 h-16 object-cover rounded-lg">';
@@ -114,7 +122,7 @@ if ($action === 'tambah') {
         'delete' => true,
     ];
 
-    include __DIR__ . '/../../templates/alert.php';
-    include __DIR__ . '/../../templates/table-template.php';
+    require_once dirname(__DIR__, 3) . '/templates/alert.php';
+    require_once dirname(__DIR__, 3) . '/templates/table-template.php';
 }
 ?>

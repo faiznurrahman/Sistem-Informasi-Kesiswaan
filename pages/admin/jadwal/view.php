@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 if (!$conn || $conn->connect_error) {
     error_log("Database connection failed: " . ($conn ? $conn->connect_error : "No connection"));

@@ -1,5 +1,6 @@
 <?php
 global $conn;
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 $message = '';
 $id_kelas = $_GET['id'] ?? 0;
@@ -24,11 +25,17 @@ if ($id_kelas) {
     exit;
 }
 
-// Fetch pengguna for walikelas dropdown
-$pengguna_query = mysqli_query($conn, "SELECT id_pengguna, nama FROM pengguna ORDER BY nama");
-$pengguna_list = [];
-while ($row = mysqli_fetch_assoc($pengguna_query)) {
-    $pengguna_list[] = $row;
+// Fetch teachers for walikelas dropdown from guru and pengguna tables
+$guru_query = mysqli_query($conn, "
+    SELECT g.id_guru, p.nama 
+    FROM guru g
+    JOIN pengguna p ON g.id_guru = p.id_pengguna
+    WHERE p.role = 'guru'
+    ORDER BY p.nama
+");
+$guru_list = [];
+while ($row = mysqli_fetch_assoc($guru_query)) {
+    $guru_list[] = $row;
 }
 
 // Handle form submission
@@ -103,9 +110,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <label class="block mb-2 font-semibold">Wali Kelas *</label>
                             <select name="id_walikelas" required class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600">
                                 <option value="">Pilih wali kelas</option>
-                                <?php foreach ($pengguna_list as $pengguna): ?>
-                                    <option value="<?php echo $pengguna['id_pengguna']; ?>" <?php echo $pengguna['id_pengguna'] == $kelas['id_walikelas'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($pengguna['nama']); ?>
+                                <?php foreach ($guru_list as $guru): ?>
+                                    <option value="<?php echo $guru['id_guru']; ?>" <?php echo $guru['id_guru'] == $kelas['id_walikelas'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($guru['nama']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

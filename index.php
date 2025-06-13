@@ -206,12 +206,15 @@ $nilaiSelected = $page === 'nilai' ? 'selected' : '';
     <div class="mt-4 max-w-full px-6">
         <div class="content-box">
             <?php
-            $pageFile = __DIR__ . "/pages/{$page}/index.php";
+            $role = $_SESSION['role'] ?? '';
+            $pageFile = __DIR__ . "/pages/{$role}/{$page}/index.php";
+
             if (file_exists($pageFile)) {
                 include $pageFile;
             } else {
                 echo "<p class='text-red-500'>Halaman tidak ditemukan.</p>";
             }
+
             ?>
         </div>
     </div>

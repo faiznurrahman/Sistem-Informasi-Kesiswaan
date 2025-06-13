@@ -1,6 +1,6 @@
 <?php
 global $conn;
-require_once __DIR__ . '/../../includes/db.php';
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 
 // Ambil ID kelas dari URL
 $id = $_GET['id'] ?? null;

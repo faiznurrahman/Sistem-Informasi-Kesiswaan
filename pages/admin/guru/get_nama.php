@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 // Include koneksi ke database langsung
-require_once __DIR__ . '/../../includes/db.php'; // ← Sesuaikan path ini
+require_once dirname(__DIR__, 3) . '/includes/db.php';
 global $conn;
 
 // Get NIP dari request body (POST JSON)
