@@ -1,7 +1,7 @@
 <?php
 $host     = "localhost";
 $username = "root";
-$password = ""; // kosongkan jika belum diatur
+$password = "root"; // kosongkan jika belum diatur
 $database = "kesiswaan"; // ganti dengan nama database kamu
 
 // Membuat koneksi

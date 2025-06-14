@@ -169,9 +169,11 @@ $rawHtmlColumns = ['foto']; // tambah 'deskripsi' atau kolom lain jika perlu
 <div class="table-container shadow-md rounded-xl p-6">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-gray-800 dark:text-white">Data Tabel</h2>
-        <a href="?page=<?= htmlspecialchars($page ?? basename($_SERVER['PHP_SELF'], '.php')) ?>&action=tambah" class="btn-primary hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium">
-            <i class="ri-add-line mr-2"></i>Tambah Data
-        </a>
+        <?php if ($showAddButton ?? true): ?>
+            <a href="?page=<?= htmlspecialchars($page ?? basename($_SERVER['PHP_SELF'], '.php')) ?>&action=tambah" class="btn-primary hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium">
+                <i class="ri-add-line mr-2"></i>Tambah Data
+            </a>
+        <?php endif; ?>
     </div>
     <div class="overflow-x-auto">
         <table id="datatable" class="min-w-full text-sm">

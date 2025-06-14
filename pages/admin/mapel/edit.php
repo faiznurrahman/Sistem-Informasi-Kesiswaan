@@ -18,20 +18,20 @@ if (!$mapel) {
     exit;
 }
 
-// Fetch current guru associated with mapel
-$current_guru_id = null;
+// Fetch current gurus associated with mapel
+$current_guru_ids = [];
 $guru_query = $conn->prepare("SELECT id_guru FROM mapel_guru WHERE id_mapel = ?");
 $guru_query->bind_param("i", $id_mapel);
 $guru_query->execute();
 $guru_result = $guru_query->get_result();
-if ($guru_row = $guru_result->fetch_assoc()) {
-    $current_guru_id = $guru_row['id_guru'];
+while ($guru_row = $guru_result->fetch_assoc()) {
+    $current_guru_ids[] = $guru_row['id_guru'];
 }
 $guru_query->close();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nama_mapel = $_POST['nama_mapel'] ?? '';
-    $id_guru = $_POST['id_guru'] ?? null;
+    $id_gurus = $_POST['id_guru'] ?? []; // Array of selected teacher IDs
 
     if ($nama_mapel) {
         $conn->begin_transaction();
@@ -44,19 +44,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             $stmt->close();
 
-            // Handle mapel_guru relationship
-            // Delete existing mapel_guru record
+            // Delete existing mapel_guru records
             $stmt = $conn->prepare("DELETE FROM mapel_guru WHERE id_mapel = ?");
             $stmt->bind_param("i", $id_mapel);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                throw new Exception('Gagal menghapus hubungan guru sebelumnya: ' . $stmt->error);
+            }
             $stmt->close();
 
-            // Insert new mapel_guru record if id_guru is provided
-            if ($id_guru) {
+            // Insert new mapel_guru records if any gurus are selected
+            if (!empty($id_gurus)) {
                 $stmt = $conn->prepare("INSERT INTO mapel_guru (id_mapel, id_guru) VALUES (?, ?)");
-                $stmt->bind_param("ii", $id_mapel, $id_guru);
-                if (!$stmt->execute()) {
-                    throw new Exception('Gagal menghubungkan guru: ' . $stmt->error);
+                foreach ($id_gurus as $id_guru) {
+                    $stmt->bind_param("ii", $id_mapel, $id_guru);
+                    if (!$stmt->execute()) {
+                        throw new Exception('Gagal menghubungkan guru: ' . $stmt->error);
+                    }
                 }
                 $stmt->close();
             }
@@ -137,12 +140,13 @@ while ($row = mysqli_fetch_assoc($guru_query)) {
                         </div>
                         <div>
                             <label class="block mb-2 font-semibold">Guru Pengajar</label>
-                            <select name="id_guru" class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600">
+                            <select name="id_guru[]" multiple class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" size="5">
                                 <option value="">Tidak ada guru</option>
                                 <?php foreach ($gurus as $guru): ?>
-                                    <option value="<?= htmlspecialchars($guru['id_guru']) ?>" <?= $guru['id_guru'] == $current_guru_id ? 'selected' : '' ?>><?= htmlspecialchars($guru['nama']) ?></option>
+                                    <option value="<?= htmlspecialchars($guru['id_guru']) ?>" <?= in_array($guru['id_guru'], $current_guru_ids) ? 'selected' : '' ?>><?= htmlspecialchars($guru['nama']) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tahan Ctrl (Windows) atau Cmd (Mac) untuk memilih lebih dari satu guru.</p>
                         </div>
                     </div>
                     <div class="flex justify-center pt-6 gap-4">

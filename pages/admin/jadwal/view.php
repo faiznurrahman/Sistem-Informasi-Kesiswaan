@@ -72,6 +72,9 @@ if ($edit_mode) {
     $edit_data = $edit_query->get_result()->fetch_assoc();
     $edit_query->close();
 
+    // Debug: Log nilai ruang dari database
+    error_log("Edit mode: id_jadwal=$edit_id, id_kelas=$id_kelas, ruang from database = " . ($edit_data['ruang'] ?? 'NULL'));
+
     if (!$edit_data) {
         $_SESSION['error'] = 'Jadwal tidak ditemukan!';
         echo "<script>window.location.href = 'index.php?page=jadwal&action=lihat&id=$id_kelas';</script>";
@@ -142,30 +145,49 @@ foreach ($mapel_list as $mapel) {
     $guru_by_mapel[$id_mapel] = $guru_list;
 }
 
+// Validate ruang input
+function validate_ruang($ruang, &$message) {
+    $ruang = trim($ruang ?? '');
+    error_log("Validating ruang: '$ruang'");
+    if (empty($ruang)) {
+        $message = '<p class="text-red-600 dark:text-red-400 font-bold">Ruang tidak boleh kosong!</p>';
+        return false;
+    }
+    if (!preg_match('/^[a-zA-Z0-9\s\-]+$/', $ruang)) {
+        $message = '<p class="text-red-600 dark:text-red-400 font-bold">Ruang hanya boleh berisi huruf, angka, spasi, atau tanda hubung!</p>';
+        return false;
+    }
+    if (strlen($ruang) > 10) {
+        $message = '<p class="text-red-600 dark:text-red-400 font-bold">Nama ruang tidak boleh lebih dari 10 karakter!</p>';
+        return false;
+    }
+    return $ruang;
+}
+
 // Handle schedule form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['tambah_tahun'])) {
     $hari = $_POST['hari'] ?? '';
     $jam_mulai = $_POST['jam_mulai'] ?? '';
     $jam_selesai = $_POST['jam_selesai'] ?? '';
     $id_mapel = $_POST['id_mapel'] ?? null;
-    $id_guru = !empty($_POST['id_guru']) ? (int)$_POST['id_guru'] : 0; // Default to 0 if no guru selected
-    $ruang = trim($_POST['ruang'] ?? '');
+    $id_guru = !empty($_POST['id_guru']) ? (int)$_POST['id_guru'] : 0;
+    $ruang = $_POST['ruang'] ?? '';
     $id_tahun = (int)$_POST['id_tahun'] ?? 0;
     $edit_id = isset($_POST['edit_id']) ? (int)$_POST['edit_id'] : 0;
+
+    // Debug: Log input values
+    error_log("Form submission: edit_id=$edit_id, hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$ruang', id_tahun=$id_tahun");
 
     // Validate inputs
     if (empty($hari) || empty($jam_mulai) || empty($jam_selesai) || empty($id_mapel) || empty($id_tahun)) {
         $message = '<p class="text-red-600 dark:text-red-400 font-bold">Semua kolom wajib diisi kecuali guru!</p>';
-    } elseif (empty($ruang) || !preg_match('/^[a-zA-Z\s\-]+$/', $ruang)) {
-        $message = '<p class="text-red-600 dark:text-red-400 font-bold">Ruang harus diisi dan hanya boleh berisi huruf, spasi, atau tanda hubung (tanpa angka)!</p>';
     } elseif ($id_guru === 0) {
         $message = '<p class="text-red-600 dark:text-red-400 font-bold">Guru harus dipilih!</p>';
+    } elseif (($validated_ruang = validate_ruang($ruang, $message)) === false) {
+        // Validation failed, message is set in validate_ruang
     } else {
         $conn->begin_transaction();
         try {
-            // Log input values for debugging
-            error_log("Input values: id_kelas=$id_kelas, hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$ruang', id_tahun=$id_tahun, edit_id=$edit_id");
-
             // Validate id_guru
             $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM mapel_guru WHERE id_mapel = ? AND id_guru = ?");
             $stmt->bind_param("ii", $id_mapel, $id_guru);
@@ -191,9 +213,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['tambah_tahun'])) {
             if ($edit_id) {
                 // Update existing schedule
                 $query = "UPDATE jadwal SET hari = ?, jam_mulai = ?, jam_selesai = ?, id_mapel = ?, id_guru = ?, ruang = ?, id_tahun = ? WHERE id_jadwal = ? AND id_kelas = ?";
-                error_log("Executing query: $query with values: hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$ruang', id_tahun=$id_tahun, id_jadwal=$edit_id, id_kelas=$id_kelas");
+                error_log("Executing update query: $query with values: hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$validated_ruang', id_tahun=$id_tahun, id_jadwal=$edit_id, id_kelas=$id_kelas");
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("sssisiiii", $hari, $jam_mulai, $jam_selesai, $id_mapel, $id_guru, $ruang, $id_tahun, $edit_id, $id_kelas);
+                $stmt->bind_param("sssisiiii", $hari, $jam_mulai, $jam_selesai, $id_mapel, $id_guru, $validated_ruang, $id_tahun, $edit_id, $id_kelas);
                 if (!$stmt->execute()) {
                     throw new Exception('Gagal memperbarui jadwal: ' . $stmt->error);
                 }
@@ -203,9 +225,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['tambah_tahun'])) {
             } else {
                 // Insert new schedule
                 $query = "INSERT INTO jadwal (id_kelas, hari, jam_mulai, jam_selesai, id_mapel, id_guru, ruang, id_tahun) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                error_log("Executing query: $query with values: id_kelas=$id_kelas, hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$ruang', id_tahun=$id_tahun");
+                error_log("Executing insert query: $query with values: id_kelas=$id_kelas, hari=$hari, jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, id_mapel=$id_mapel, id_guru=$id_guru, ruang='$validated_ruang', id_tahun=$id_tahun");
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("issssisi", $id_kelas, $hari, $jam_mulai, $jam_selesai, $id_mapel, $id_guru, $ruang, $id_tahun);
+                $stmt->bind_param("issssisi", $id_kelas, $hari, $jam_mulai, $jam_selesai, $id_mapel, $id_guru, $validated_ruang, $id_tahun);
                 if (!$stmt->execute()) {
                     throw new Exception('Gagal menambahkan jadwal: ' . $stmt->error);
                 }
@@ -285,6 +307,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['tambah_tahun'])) {
                 updateGuruList();
                 document.getElementById('jadwalForm').classList.remove('hidden');
             <?php endif; ?>
+            // Debug: Log ruang input value on form load
+            console.log("Ruang input value on load: ", document.querySelector('input[name="ruang"]').value);
         };
     </script>
 </head>
@@ -415,7 +439,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['tambah_tahun'])) {
                         </div>
                         <div>
                             <label class="block mb-2 font-semibold">Ruang *</label>
-                            <input name="ruang" required placeholder="Masukkan nama ruang" class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" value="<?= $edit_mode ? htmlspecialchars($edit_data['ruang']) : '' ?>" pattern="[a-zA-Z\s\-]+" title="Hanya boleh berisi huruf, spasi, atau tanda hubung (tanpa angka)" />
+                            <input name="ruang" required placeholder="Masukkan nama ruang" class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" value="<?= $edit_mode ? htmlspecialchars($edit_data['ruang'] ?? '') : '' ?>" pattern="[a-zA-Z0-9\s\-]+" title="Hanya boleh berisi huruf, angka, spasi, atau tanda hubung" />
                         </div>
                         <div>
                             <label class="block mb-2 font-semibold">Tahun Ajaran *</label>

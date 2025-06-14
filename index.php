@@ -152,12 +152,6 @@ $nilaiSelected = $page === 'nilai' ? 'selected' : '';
                 </a>
             </li>
 
-            <li class="mb-1 group <?= $page == 'pengaturan' ? 'active' : '' ?>">
-                <a href="?page=pengaturan" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-950 hover:text-white rounded-md group-[.active]:bg-gray-800 group-[.active]:text-white">
-                    <i class="ri-settings-2-line mr-3 text-lg"></i>
-                    <span class="text-sm">Pengaturan</span>
-                </a>
-            </li>
         </ul>
     <?php endif; ?>
 

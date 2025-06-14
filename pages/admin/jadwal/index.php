@@ -79,7 +79,7 @@ if ($action === 'tambah') {
         'edit' => false,
         'delete' => false,
     ];
-
+    $showAddButton = false;
     require_once dirname(__DIR__, 3) . '/templates/alert.php';
     require_once dirname(__DIR__, 3) . '/templates/table-template.php';
 }

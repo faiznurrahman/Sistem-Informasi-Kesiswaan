@@ -2,8 +2,19 @@
 global $conn;
 require_once dirname(__DIR__, 3) . '/includes/db.php';
 
+// Pastikan guru sudah login
+if (!isset($_SESSION['id_pengguna']) || $_SESSION['role'] !== 'guru') {
+    $_SESSION['alert'] = [
+        'type' => 'error',
+        'message' => 'Anda harus login sebagai guru untuk melihat daftar siswa.'
+    ];
+    echo "<script>window.location.href = '/login.php';</script>";
+    exit;
+}
+
 $action = $_GET['action'] ?? '';
 $id = $_GET['id'] ?? null;
+$id_guru = $_SESSION['id_pengguna'];
 
 // Hapus data siswa
 if ($action === 'delete' && $id) {
@@ -54,7 +65,7 @@ if ($action === 'delete' && $id) {
         $stmt->close();
     }
 
-    echo "<script>window.location.href = '/index.php?page=siswa';</script>";
+    echo "<script>window.location.href = '/index.php?page=siswa_walikelas';</script>";
     exit;
 }
 
@@ -64,7 +75,7 @@ if ($action === 'edit') {
 } elseif ($action === 'lihat') {
     include 'view.php';
 } else {
-    // Tampilkan daftar siswa
+    // Tampilkan daftar siswa dari kelas yang dikelola wali kelas
     $query = mysqli_query($conn, "
         SELECT 
             s.id_siswa AS id, 
@@ -77,6 +88,8 @@ if ($action === 'edit') {
             k.nama_kelas
         FROM siswa s 
         LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+        WHERE k.id_walikelas = '$id_guru'
+        ORDER BY s.nama_siswa
     ");
 
     $rows = [];
@@ -105,13 +118,12 @@ if ($action === 'edit') {
     ];
 
     $actions = [
-        'view' => false,
-        'edit' => true,
-        'delete' => true,
-        'add' => false // Menonaktifkan tombol tambah
+        'view' => true,
+        'edit' => false,
+        'delete' => false,// Menonaktifkan tombol tambah
     ];
 
-    $show_add_button = false; // Menonaktifkan tombol "Tambah Data" secara eksplisit
+    $showAddButton = false;
 
     require_once dirname(__DIR__, 3) . '/templates/alert.php';
     require_once dirname(__DIR__, 3) . '/templates/table-template.php';

@@ -5,12 +5,12 @@ $message = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nama_mapel = $_POST['nama_mapel'] ?? '';
-    $id_guru = $_POST['id_guru'] ?? null;
+    $id_gurus = $_POST['id_guru'] ?? []; // Array of selected teacher IDs
 
     if ($nama_mapel) {
         $conn->begin_transaction();
         try {
-            // Simpan nama_mapel ke tabel mapel
+            // Save subject name to mapel table
             $stmt = $conn->prepare("INSERT INTO mapel (nama_mapel) VALUES (?)");
             $stmt->bind_param("s", $nama_mapel);
             if (!$stmt->execute()) {
@@ -19,23 +19,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $id_mapel = $conn->insert_id;
             $stmt->close();
 
-            // Jika id_guru dipilih, simpan ke mapel_guru
-            if ($id_guru) {
+            // If teachers are selected, save to mapel_guru
+            if (!empty($id_gurus)) {
                 $stmt = $conn->prepare("INSERT INTO mapel_guru (id_mapel, id_guru) VALUES (?, ?)");
-                $stmt->bind_param("ii", $id_mapel, $id_guru);
-                if (!$stmt->execute()) {
-                    throw new Exception('Gagal menghubungkan guru: ' . $stmt->error);
+                foreach ($id_gurus as $id_guru) {
+                    $stmt->bind_param("ii", $id_mapel, $id_guru);
+                    if (!$stmt->execute()) {
+                        throw new Exception('Gagal menghubungkan guru: ' . $stmt->error);
+                    }
                 }
                 $stmt->close();
             }
 
-            // Commit transaksi
+            // Commit transaction
             $conn->commit();
             $_SESSION['success'] = 'Mata pelajaran berhasil ditambahkan!';
             echo "<script>window.location.href = 'index.php?page=mapel';</script>";
             exit;
         } catch (Exception $e) {
-            // Rollback jika ada error
+            // Rollback if error occurs
             $conn->rollback();
             $message = '<p class="text-red-600 dark:text-red-400 font-bold">Gagal menyimpan data: ' . $e->getMessage() . '</p>';
         }
@@ -44,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Ambil daftar guru untuk dropdown
+// Fetch teachers for dropdown
 $guru_query = mysqli_query($conn, "
     SELECT g.id_guru, p.nama
     FROM guru g
@@ -105,12 +107,13 @@ while ($row = mysqli_fetch_assoc($guru_query)) {
                         </div>
                         <div>
                             <label class="block mb-2 font-semibold">Guru Pengajar</label>
-                            <select name="id_guru" class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600">
+                            <select name="id_guru[]" multiple class="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" size="5">
                                 <option value="">Tidak ada guru</option>
                                 <?php foreach ($gurus as $guru): ?>
                                     <option value="<?= htmlspecialchars($guru['id_guru']) ?>"><?= htmlspecialchars($guru['nama']) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tahan Ctrl (Windows) atau Cmd (Mac) untuk memilih lebih dari satu guru.</p>
                         </div>
                     </div>
                     <div class="flex justify-center pt-6 gap-4">
